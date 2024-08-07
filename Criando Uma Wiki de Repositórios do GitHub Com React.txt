@@ -1,0 +1,237 @@
+PASSO A PASSO:
+Criar uma Wiki de Repositórios do GitHub usando React envolve várias etapas. Vou te guiar através de um processo básico para criar uma aplicação que lista e exibe detalhes dos repositórios do GitHub de um usuário. Vamos utilizar a API do GitHub para obter dados sobre os repositórios e exibir essas informações em uma interface construída com React.
+
+### Pré-requisitos
+
+1. **Node.js e npm**: Certifique-se de que você tem o Node.js e o npm instalados. Você pode baixá-los [aqui](https://nodejs.org/).
+2. **Conhecimento básico em React**: Familiaridade com componentes, props, estado e hooks do React.
+3. **Conta no GitHub**: Para acessar a API do GitHub.
+
+### Passos
+
+#### 1. Configuração do Projeto
+
+1. **Criar um novo projeto React**:
+   ```bash
+   npx create-react-app github-wiki
+   cd github-wiki
+   ```
+
+2. **Instalar Axios** (para fazer requisições HTTP):
+   ```bash
+   npm install axios
+   ```
+
+#### 2. Estrutura do Projeto
+
+Crie uma estrutura básica para a aplicação:
+
+```
+src/
+│
+├── components/
+│   ├── RepositoryList.js
+│   └── RepositoryDetails.js
+│
+├── App.js
+└── index.js
+```
+
+#### 3. Obter Dados da API do GitHub
+
+Vamos criar um serviço para obter dados da API do GitHub.
+
+Crie um arquivo `githubService.js` na pasta `src`:
+
+```javascript
+import axios from 'axios';
+
+const GITHUB_API_URL = 'https://api.github.com';
+
+const getRepositories = (username) => {
+    return axios.get(`${GITHUB_API_URL}/users/${username}/repos`);
+};
+
+const getRepositoryDetails = (username, repoName) => {
+    return axios.get(`${GITHUB_API_URL}/repos/${username}/${repoName}`);
+};
+
+export { getRepositories, getRepositoryDetails };
+```
+
+#### 4. Listar Repositórios
+
+No componente `RepositoryList.js`, vamos buscar e listar os repositórios do usuário.
+
+```javascript
+import React, { useState, useEffect } from 'react';
+import { getRepositories } from '../githubService';
+
+const RepositoryList = ({ username, onSelectRepository }) => {
+    const [repos, setRepos] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        getRepositories(username)
+            .then(response => {
+                setRepos(response.data);
+                setLoading(false);
+            })
+            .catch(error => {
+                console.error('Erro ao buscar repositórios:', error);
+                setLoading(false);
+            });
+    }, [username]);
+
+    if (loading) {
+        return <p>Carregando...</p>;
+    }
+
+    return (
+        <ul>
+            {repos.map(repo => (
+                <li key={repo.id} onClick={() => onSelectRepository(repo)}>
+                    {repo.name}
+                </li>
+            ))}
+        </ul>
+    );
+};
+
+export default RepositoryList;
+```
+
+#### 5. Detalhes do Repositório
+
+No componente `RepositoryDetails.js`, vamos exibir detalhes de um repositório selecionado.
+
+```javascript
+import React, { useState, useEffect } from 'react';
+import { getRepositoryDetails } from '../githubService';
+
+const RepositoryDetails = ({ username, repoName }) => {
+    const [repoDetails, setRepoDetails] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        getRepositoryDetails(username, repoName)
+            .then(response => {
+                setRepoDetails(response.data);
+                setLoading(false);
+            })
+            .catch(error => {
+                console.error('Erro ao buscar detalhes do repositório:', error);
+                setLoading(false);
+            });
+    }, [username, repoName]);
+
+    if (loading) {
+        return <p>Carregando...</p>;
+    }
+
+    if (!repoDetails) {
+        return <p>Repositório não encontrado</p>;
+    }
+
+    return (
+        <div>
+            <h2>{repoDetails.name}</h2>
+            <p>{repoDetails.description}</p>
+            <p>Linguagem: {repoDetails.language}</p>
+            <p>Estrelas: {repoDetails.stargazers_count}</p>
+            <p>Forks: {repoDetails.forks_count}</p>
+            <a href={repoDetails.html_url} target="_blank" rel="noopener noreferrer">Ver no GitHub</a>
+        </div>
+    );
+};
+
+export default RepositoryDetails;
+```
+
+#### 6. Integrando Tudo no `App.js`
+
+No arquivo `App.js`, vamos integrar os componentes `RepositoryList` e `RepositoryDetails`.
+
+```javascript
+import React, { useState } from 'react';
+import RepositoryList from './components/RepositoryList';
+import RepositoryDetails from './components/RepositoryDetails';
+import './App.css';
+
+const App = () => {
+    const [selectedRepo, setSelectedRepo] = useState(null);
+    const [username, setUsername] = useState(''); // exemplo: "octocat"
+
+    const handleSelectRepository = (repo) => {
+        setSelectedRepo(repo);
+    };
+
+    return (
+        <div className="App">
+            <h1>Wiki de Repositórios do GitHub</h1>
+            <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Digite o nome de usuário do GitHub"
+            />
+            <RepositoryList username={username} onSelectRepository={handleSelectRepository} />
+            {selectedRepo && (
+                <RepositoryDetails username={username} repoName={selectedRepo.name} />
+            )}
+        </div>
+    );
+};
+
+export default App;
+```
+
+#### 7. Estilização (Opcional)
+
+Você pode adicionar um arquivo `App.css` para estilizar sua aplicação.
+
+```css
+.App {
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    cursor: pointer;
+    margin: 5px 0;
+    padding: 10px;
+    background-color: #f0f0f0;
+}
+
+li:hover {
+    background-color: #e0e0e0;
+}
+
+input {
+    padding: 10px;
+    margin: 20px 0;
+    width: 300px;
+}
+
+h2 {
+    margin-top: 20px;
+}
+```
+
+### Executando a Aplicação
+
+1. No terminal, dentro da pasta do projeto, execute:
+   ```bash
+   npm start
+   ```
+
+2. Abra seu navegador e vá para `http://localhost:3000`.
+
+Você deve ver uma interface onde pode digitar um nome de usuário do GitHub, listar os repositórios desse usuário e clicar em um repositório para ver os detalhes.
+
+Isso cobre um exemplo básico de como criar uma Wiki de Repositórios do GitHub usando React. A partir daqui, você pode expandir e melhorar a aplicação conforme suas necessidades.
